@@ -144,8 +144,8 @@ static void LoadLocalEnvFiles()
 {
     var candidates = new[]
     {
-        Path.Combine(Directory.GetCurrentDirectory(), ".env"),
         Path.Combine(Directory.GetCurrentDirectory(), "..", ".env"),
+        Path.Combine(Directory.GetCurrentDirectory(), ".env"),
     };
 
     foreach (var file in candidates)
