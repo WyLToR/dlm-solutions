@@ -1,9 +1,6 @@
 import type { ProductCreateRequest, ProductResponse, ProductUpdateRequest } from "../types/dto";
 import { getLiveAuthCookie } from "../utils/authCookie";
 
-const API_ORIGIN = import.meta.env.PROD ? "" : (import.meta.env.VITE_API_URL ?? "http://localhost:5190");
-const API_BASE_URL = API_ORIGIN.replace(/\/+$/, "");
-
 class ApiError extends Error {
   status: number;
 
@@ -53,7 +50,7 @@ async function parseApiError(response: Response): Promise<never> {
 }
 
 async function requestJson<T>(path: string, options?: RequestInit): Promise<T> {
-  const response = await fetch(`${API_BASE_URL}${path}`, {
+  const response = await fetch(path, {
     ...options,
     headers: {
       ...getAuthHeaders(),
@@ -69,7 +66,7 @@ async function requestJson<T>(path: string, options?: RequestInit): Promise<T> {
 }
 
 async function requestNoContent(path: string, options?: RequestInit): Promise<void> {
-  const response = await fetch(`${API_BASE_URL}${path}`, {
+  const response = await fetch(path, {
     ...options,
     headers: {
       ...getAuthHeaders(),
