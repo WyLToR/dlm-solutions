@@ -13,7 +13,9 @@ interface ApiErrorResponse {
   message?: string;
 }
 
-const AUTH_API_BASE_URL = `${import.meta.env.VITE_API_URL ?? "http://localhost:5190"}/api/Auth`;
+const API_ORIGIN = import.meta.env.PROD ? "" : (import.meta.env.VITE_API_URL ?? "http://localhost:5190");
+const API_BASE_URL = API_ORIGIN.replace(/\/+$/, "");
+const AUTH_API_BASE_URL = `${API_BASE_URL}/api/Auth`;
 
 function isApiErrorResponse(value: unknown): value is ApiErrorResponse {
   if (!value || typeof value !== "object") {

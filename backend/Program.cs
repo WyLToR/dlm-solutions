@@ -7,8 +7,15 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
+using Microsoft.AspNetCore.Http;
 
 var builder = WebApplication.CreateBuilder(args);
+
+var port = Environment.GetEnvironmentVariable("PORT");
+if (!string.IsNullOrWhiteSpace(port))
+{
+    builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
+}
 
 var jwtKey = builder.Configuration["Jwt:Key"];
 if (string.IsNullOrWhiteSpace(jwtKey))
@@ -18,6 +25,10 @@ if (string.IsNullOrWhiteSpace(jwtKey))
 
 var key = Encoding.UTF8.GetBytes(jwtKey);
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+if (string.IsNullOrWhiteSpace(connectionString))
+{
+    throw new InvalidOperationException("Missing configuration value: ConnectionStrings:DefaultConnection");
+}
 
 // Authentication
 builder.Services.AddAuthentication(options =>
@@ -41,17 +52,19 @@ builder.Services.AddAuthentication(options =>
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseMySQL(connectionString));
 
-// CORS
-builder.Services.AddCors(options =>
+if (builder.Environment.IsDevelopment())
 {
-    options.AddPolicy("AllowFrontend", policy =>
+    builder.Services.AddCors(options =>
     {
-        policy
-            .WithOrigins("http://localhost:5173")
-            .AllowAnyHeader()
-            .AllowAnyMethod();
+        options.AddPolicy("AllowFrontend", policy =>
+        {
+            policy
+                .WithOrigins("http://localhost:5173")
+                .AllowAnyHeader()
+                .AllowAnyMethod();
+        });
     });
-});
+}
 
 // Authorization
 builder.Services.AddAuthorization();
@@ -69,13 +82,38 @@ if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
+    app.UseCors("AllowFrontend");
 }
 
-app.UseCors("AllowFrontend");
 app.UseHttpsRedirection();
+app.UseDefaultFiles();
+app.UseStaticFiles();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
+app.MapGet("/api/health", () => Results.Ok(new { status = "ok" }));
+
+var webRoot = app.Environment.WebRootPath ?? Path.Combine(app.Environment.ContentRootPath, "wwwroot");
+var indexPath = Path.Combine(webRoot, "index.html");
+
+app.MapFallback(async context =>
+{
+    if (context.Request.Path.StartsWithSegments("/api"))
+    {
+        context.Response.StatusCode = StatusCodes.Status404NotFound;
+        return;
+    }
+
+    if (!File.Exists(indexPath))
+    {
+        context.Response.StatusCode = StatusCodes.Status404NotFound;
+        await context.Response.WriteAsync("Frontend not built.");
+        return;
+    }
+
+    context.Response.ContentType = "text/html; charset=utf-8";
+    await context.Response.SendFileAsync(indexPath);
+});
 
 using (var scope = app.Services.CreateScope())
 {

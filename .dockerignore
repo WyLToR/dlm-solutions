@@ -1,0 +1,12 @@
+.git
+.gitignore
+.vscode
+auth-01-starting-project
+
+**/bin
+**/obj
+**/node_modules
+**/dist
+
+docker-compose.yml
+README.md
